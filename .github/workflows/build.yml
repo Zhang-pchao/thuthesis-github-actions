@@ -1,4 +1,4 @@
-name: Build Thesis
+name: Build Thesis Project
 
 on:
   push:
@@ -6,47 +6,62 @@ on:
   workflow_dispatch:
 
 env:
-  CORE_PKGS: >-
-    scheme-basic texliveonfly latexmk xetex xelatex
-    thuthesis ctex amsmath amsthm geometry graphicx hyperref
-    cleveref booktabs caption enumitem fancyhdr float
-    pdfpages titlesec threeparttable ulem url
-  BIB_PKGS: >-
-    biblatex biblatex-gb7714-2015 biber biber-windows
-    natbib
-  FONT_PKGS: >-
-    fontenc xecjk xits newtx unicode-math
-  EXTRA_PKGS: >-
-    algorithms array environ etoolbox filehook
-    footmisc iftex kvdefinekeys kvoptions kvsetkeys
-    lscape pdflscape multirow notoccite siunitx xparse
+  # 宏包分类（保持与模板完全一致）
+  XECJK_PKGS: fontspec xecjk ulem xetex
+  CTEX_PKGS: cjk ctex everysel zhnumber
+  BIBLATEX_PKGS: biber biblatex biblatex-apa biblatex-gb7714-2015 biblatex-mla xstring
+  HYPERREF_PKGS: pdflscape
+  NOMENCL_PKGS: nomencl koma-script xkeyval
+  BIN_PKGS: latexmk l3build
+  REQUIRED_PKGS: >-
+    scheme-basic texliveonfly bibunits bigfoot caption enumitem
+    environ etoolbox filehook footmisc notoccite pdfpages threeparttable
+    titlesec trimspaces unicode-math lt3luabridge cell
+  FONT_PKGS: fandol tex-gyre xits newtx
+  EXTRA_PKGS: algorithms apacite booktabs ntheorem siunitx
+  MARKDOWN_PKGS: markdown fancyvrb csvsimple gobble
+  DOC_PKGS: hologo hypdoc listings xcolor
+  EXAMPLE_PLGS: float fp metalogo multirow mwe
 
 jobs:
   build:
     runs-on: windows-latest
+    
     steps:
+    # 检出代码
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
+    # 安装完整TeX Live环境
     - name: Setup TeX Live
       uses: teatimeguest/setup-texlive-action@v3
       with:
-        packages: ${{ env.CORE_PKGS }} ${{ env.BIB_PKGS }} ${{ env.FONT_PKGS }} ${{ env.EXTRA_PKGS }}
+        packages: >-
+          ${{ env.XECJK_PKGS }} ${{ env.CTEX_PKGS }} ${{ env.BIBLATEX_PKGS }}
+          ${{ env.HYPERREF_PKGS }} ${{ env.NOMENCL_PKGS }} ${{ env.BIN_PKGS }}
+          ${{ env.REQUIRED_PKGS }} ${{ env.FONT_PKGS }} ${{ env.EXTRA_PKGS }}
+          ${{ env.MARKDOWN_PKGS }} ${{ env.DOC_PKGS }} ${{ env.EXAMPLE_PLGS }}
         update-all-packages: true
 
+    # Windows 中文字体安装
     - name: Install Chinese Fonts
       shell: cmd
       run: |
         DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hans~~~und-HANS~0.0.1.0
         DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hant~~~und-HANT~0.0.1.0
 
-    - name: Compile Thesis
-      run: latexmk -xelatex thuthesis-example.tex
+    # 编译流程
+    - name: Compile Thesis Example
+      run: |
+        latexmk -xelatex -interaction=nonstopmode thuthesis-example.tex
 
-    - name: Clean Aux Files
+    # 清理临时文件
+    - name: Clean Auxiliary Files
       run: latexmk -c
 
-    - name: Upload Thesis PDF
-      uses: actions/upload-artifact@v4
+    # 上传构建产物
+    - uses: actions/upload-artifact@v4
       with:
         name: thesis-pdf
         path: thuthesis-example.pdf
