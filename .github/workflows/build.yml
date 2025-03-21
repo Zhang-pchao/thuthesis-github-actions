@@ -1,81 +1,52 @@
-name: Build the project
+name: Build Thesis
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  CORE_PKGS: >-
+    scheme-basic texliveonfly latexmk xetex xelatex
+    thuthesis ctex amsmath amsthm geometry graphicx hyperref
+    cleveref booktabs caption enumitem fancyhdr float
+    pdfpages titlesec threeparttable ulem url
+  BIB_PKGS: >-
+    biblatex biblatex-gb7714-2015 biber biber-windows
+    natbib
+  FONT_PKGS: >-
+    fontenc xecjk xits newtx unicode-math
+  EXTRA_PKGS: >-
+    algorithms array environ etoolbox filehook
+    footmisc iftex kvdefinekeys kvoptions kvsetkeys
+    lscape pdflscape multirow notoccite siunitx xparse
 
 jobs:
   build:
-
     runs-on: windows-latest
-
     steps:
-    - uses: actions/checkout@v3
-    
-    - uses: teatimeguest/setup-texlive-action@v2
+    - uses: actions/checkout@v4
+
+    - name: Setup TeX Live
+      uses: teatimeguest/setup-texlive-action@v3
       with:
-        packages: >-
-          texliveonfly
-          scheme-basic
-          cleveref
-          hyperref
-          latexmk
-          biblatex
-          xelatex
-          xetex
-          amsthm
-          threeparttable
-          multirow
-          longtable
-          algorithms
-          siunitx
-          thuthesis
-          ctex
-          iftex
-          kvdefinekeys
-          kvsetkeys
-          kvoptions
-          etoolbox
-          filehook
-          xparse
-          geometry
-          fancyhdr
-          titlesec
-          notoccite
-          amsmath
-          graphicx
-          caption
-          pdfpages
-          enumitem
-          environ
-          footmisc
-          bigfoot
-          xecjk
-          ulem
-          array
-          booktabs
-          url
-          natbib
-          bibunits
-          newtx
-          unicode-math
-          fontenc
-          bm
-          xits
-          float
-          biblatex-gb7714-2015
-          xstring
-          lscape
-          pdflscape
-          biber
-          biber-windows
-    - run: DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hans~~~und-HANS~0.0.1.0
-    - run: DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hant~~~und-HANT~0.0.1.0
-    - run: latexmk thuthesis-example.tex
-    - run: latexmk spine.tex
-    - run: latexmk -c
-    
-    - uses: actions/upload-artifact@v4
+        packages: ${{ env.CORE_PKGS }} ${{ env.BIB_PKGS }} ${{ env.FONT_PKGS }} ${{ env.EXTRA_PKGS }}
+        update-all-packages: true
+
+    - name: Install Chinese Fonts
+      shell: cmd
+      run: |
+        DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hans~~~und-HANS~0.0.1.0
+        DISM.exe /Online /Add-Capability /CapabilityName:Language.Fonts.Hant~~~und-HANT~0.0.1.0
+
+    - name: Compile Thesis
+      run: latexmk -xelatex thuthesis-example.tex
+
+    - name: Clean Aux Files
+      run: latexmk -c
+
+    - name: Upload Thesis PDF
+      uses: actions/upload-artifact@v4
       with:
-        name: thesis pdf
+        name: thesis-pdf
         path: thuthesis-example.pdf
